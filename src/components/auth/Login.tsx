@@ -5,8 +5,14 @@ import { Label } from "@/components/ui/label";
 import api from '@/services/api';
 import Swal from 'sweetalert2';
 import { Loader2, Mail, Send } from 'lucide-react';
+import { UserRole } from '@/types/auth';
 
-export default function Login() {
+interface LoginProps {
+  onSuccess: (role: UserRole) => void;
+  onNavigateToOtp: () => void;
+}
+
+export default function Login({ onSuccess, onNavigateToOtp }: LoginProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,14 +23,13 @@ export default function Login() {
     try {
       const res = await api.post('/api/login', { email });
       if (res.data && res.data.success) {
-        Swal.fire({
+        await Swal.fire({
           title: 'OTP Sent!',
           text: 'Please check your email for the OTP code',
           icon: 'success',
           confirmButtonColor: 'hsl(220, 91%, 67%)',
         });
-        // In a real app with routing, you'd redirect here
-        // For now, the user can click the "Verify OTP" button in the nav
+        onNavigateToOtp();
       } else {
         Swal.fire({
           title: 'Error',
@@ -94,15 +99,6 @@ export default function Login() {
           )}
         </Button>
       </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <button className="text-primary hover:text-primary-glow transition-colors font-medium">
-            Register here
-          </button>
-        </p>
-      </div>
     </div>
   );
 }

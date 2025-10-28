@@ -4,12 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from '@/services/api';
 import Swal from 'sweetalert2';
-import { Loader2, UserPlus, User, Mail, Lock } from 'lucide-react';
+import { Loader2, ShieldCheck, Mail, Key } from 'lucide-react';
+import { UserRole } from '@/types/auth';
 
-export default function Register() {
-  const [username, setUsername] = useState('');
+interface OtpVerificationProps {
+  onSuccess: (role: UserRole) => void;
+}
+
+export default function OtpVerification({ onSuccess }: OtpVerificationProps) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -17,30 +21,23 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const payload = new URLSearchParams();
-      payload.append('username', username);
-      payload.append('email', email);
-      payload.append('password', password);
-
-      const res = await api.post('/auth/register', payload, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-
+      const res = await api.post('/api/verify_otp', { email, code });
       if (res.data && res.data.success) {
-        Swal.fire({
-          title: 'Success!',
-          text: 'Account created successfully. Please log in.',
+        await Swal.fire({
+          title: 'Verified!',
+          text: 'OTP verified successfully. Redirecting...',
           icon: 'success',
           confirmButtonColor: 'hsl(220, 91%, 67%)',
+          timer: 2000,
         });
-        // Reset form
-        setUsername('');
-        setEmail('');
-        setPassword('');
+        
+        // Get user role from response
+        const role = res.data.role || res.data.user?.role || 'student';
+        onSuccess(role as UserRole);
       } else {
         Swal.fire({
-          title: 'Error',
-          text: (res.data && res.data.message) || 'Failed to register',
+          title: 'Invalid OTP',
+          text: (res.data && res.data.message) || 'Please check your code and try again',
           icon: 'error',
           confirmButtonColor: 'hsl(220, 91%, 67%)',
         });
@@ -62,34 +59,15 @@ export default function Register() {
     <div className="max-w-md mx-auto">
       <div className="mb-8 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary mb-4 shadow-glow">
-          <UserPlus className="w-8 h-8 text-white" />
+          <ShieldCheck className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-3xl font-bold mb-2">Create Account</h2>
+        <h2 className="text-3xl font-bold mb-2">Verify Your Identity</h2>
         <p className="text-muted-foreground">
-          Sign up to get started with EGUIDANCE
+          Enter the OTP code sent to your email
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="username" className="text-foreground">
-            Username
-          </Label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="username"
-              type="text"
-              placeholder="johndoe"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={loading}
-              className="pl-10 bg-input border-border focus:border-primary transition-all"
-            />
-          </div>
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="email" className="text-foreground">
             Email Address
@@ -110,22 +88,26 @@ export default function Register() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-foreground">
-            Password
+          <Label htmlFor="code" className="text-foreground">
+            OTP Code
           </Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              id="code"
+              type="text"
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
               required
               disabled={loading}
-              className="pl-10 bg-input border-border focus:border-primary transition-all"
+              maxLength={6}
+              className="pl-10 bg-input border-border focus:border-primary transition-all tracking-widest text-lg font-mono"
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Enter the 6-digit code from your email
+          </p>
         </div>
 
         <Button
@@ -137,25 +119,16 @@ export default function Register() {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating Account...
+              Verifying...
             </>
           ) : (
             <>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Create Account
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Verify OTP
             </>
           )}
         </Button>
       </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{' '}
-          <button className="text-primary hover:text-primary-glow transition-colors font-medium">
-            Sign in here
-          </button>
-        </p>
-      </div>
     </div>
   );
 }
